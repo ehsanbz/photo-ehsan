@@ -34,14 +34,19 @@ const nav = [ ['Stories', '/stories/'], ['Gallery', '/gallery/'], ['Journal', '/
   </head>
   <body>
     <a class="skip-link" href="#main">Skip to content</a>
-    <header class="site-header wrap">
-      <a class="wordmark" href="/" aria-label="Ehsan Bagherzadeh Photography, home">Ehsan Bagherzadeh<span>Photography</span></a>
-      <nav aria-label="Main navigation"><ul>{nav.map(([label, href]) => <li><a href={href} aria-current={Astro.url.pathname === href || (href !== '/gallery/' && Astro.url.pathname.startsWith(href) && Astro.url.pathname !== '/') ? 'page' : undefined}>{label}</a></li>)}</ul></nav>
+    <header class="site-header">
+      <div class="header-inner wrap">
+        <div class="brand-group">
+          <a class="wordmark" href="/" aria-label="Ehsan Bagherzadeh Photography, home">Ehsan Bagherzadeh<span>Photography</span></a>
+          <a class="main-site-link" href="https://www.ehsan.bz" aria-label="Visit Ehsan's main website">Main site <span aria-hidden="true">↗</span></a>
+        </div>
+        <nav aria-label="Main navigation"><ul>{nav.map(([label, href]) => <li><a href={href} aria-current={Astro.url.pathname === href || (href !== '/gallery/' && Astro.url.pathname.startsWith(href) && Astro.url.pathname !== '/') ? 'page' : undefined}>{label}</a></li>)}</ul></nav>
+      </div>
     </header>
     <main id="main"><slot /></main>
     <footer class="site-footer wrap">
       <div><span class="footer-name">Ehsan Bagherzadeh</span><p>Photographs, places, and passing moments.</p></div>
-      <div class="footer-links"><a href="https://www.ehsan.bz">Main site → ehsan.bz</a><span>© {new Date().getFullYear()} Ehsan Bagherzadeh</span></div>
+      <span>© {new Date().getFullYear()} Ehsan Bagherzadeh</span>
     </footer>
   </body>
 </html>
