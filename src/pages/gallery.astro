@@ -1,0 +1,51 @@
+---
+import { Image, getImage } from 'astro:assets';
+import SiteLayout from '../layouts/SiteLayout.astro';
+import { getGallery } from '../lib/content';
+const gallery = await getGallery();
+const items = await Promise.all(gallery.map(async (photo) => ({ ...photo, full: (await getImage({ src: photo.image, width: Math.min(photo.image.width, 2000), format: 'webp', quality: 86 })).src })));
+const categories = ['All', ...new Set(items.map((item) => item.category))];
+---
+<SiteLayout title="Gallery" description="Browse individual photographs of Berlin, urban life, architecture and travel by Ehsan Bagherzadeh." noindex={!gallery.some((photo) => !photo.sample)}>
+  <div class="wrap"><div class="page-intro"><span class="eyebrow">02 / Photographs</span><h1>Gallery</h1><p>Individual frames from walks and journeys. Select an image to see it larger.</p><span class="sample-note">Preview edition: these sample images will be replaced with Ehsan's photographs.</span></div>
+    <div class="gallery-controls" role="group" aria-label="Filter photographs" hidden>{categories.map((category) => <button type="button" data-filter={category} aria-pressed={category === 'All' ? 'true' : 'false'}>{category}</button>)}</div>
+    <div class="gallery-grid">{items.map((photo) => <article class="gallery-item" data-category={photo.category}><figure><a href={photo.full} data-lightbox data-full={photo.full} data-alt={photo.alt} data-caption={photo.caption ?? ''} data-meta={[photo.location, photo.date, photo.camera, photo.lens].filter(Boolean).join(' · ')} data-story={photo.url} aria-label={`View larger: ${photo.alt}`}><div class="image-frame"><Image src={photo.image} alt={photo.alt} widths={[320,480,720,960].filter((w) => w <= photo.image.width)} sizes="(max-width: 650px) 50vw, (max-width: 900px) 50vw, 33vw" format="webp" loading="lazy" decoding="async" /></div></a><figcaption><span>{photo.caption || photo.title}</span><span>{photo.location ?? photo.category}</span></figcaption></figure></article>)}</div>
+  </div>
+  <dialog class="lightbox" aria-label="Photograph viewer"><div class="lightbox-inner"><div class="lightbox-top"><span>Ehsan Bagherzadeh · Photography</span><button type="button" data-close aria-label="Close image viewer">Close ×</button></div><div class="lightbox-view"><button type="button" data-prev aria-label="Previous photograph">←</button><img alt="" /><button type="button" data-next aria-label="Next photograph">→</button></div><div class="lightbox-bottom"><span data-details></span><a data-story-link href="/stories/">View story →</a></div></div></dialog>
+  <script>
+    const controls = document.querySelector<HTMLElement>('.gallery-controls');
+    const dialog = document.querySelector<HTMLDialogElement>('.lightbox');
+    const image = dialog?.querySelector<HTMLImageElement>('img');
+    const details = dialog?.querySelector<HTMLElement>('[data-details]');
+    const storyLink = dialog?.querySelector<HTMLAnchorElement>('[data-story-link]');
+    const links = [...document.querySelectorAll<HTMLAnchorElement>('[data-lightbox]')];
+    let current = 0;
+    let opener: HTMLAnchorElement | null = null;
+    const visible = () => links.filter((link) => !link.closest('.gallery-item')?.hasAttribute('hidden'));
+    function show(link: HTMLAnchorElement) {
+      if (!image || !details || !storyLink) return;
+      image.src = link.dataset.full ?? link.href;
+      image.alt = link.dataset.alt ?? '';
+      details.textContent = [link.dataset.caption, link.dataset.meta].filter(Boolean).join(' — ');
+      storyLink.href = link.dataset.story ?? '/stories/';
+    }
+    links.forEach((link) => link.addEventListener('click', (event) => {
+      if (!dialog) return;
+      event.preventDefault(); opener = link; current = visible().indexOf(link); show(link); dialog.showModal();
+      dialog.querySelector<HTMLButtonElement>('[data-close]')?.focus();
+    }));
+    dialog?.querySelector('[data-close]')?.addEventListener('click', () => dialog.close());
+    dialog?.querySelector('[data-prev]')?.addEventListener('click', () => { const list = visible(); current = (current - 1 + list.length) % list.length; show(list[current]); });
+    dialog?.querySelector('[data-next]')?.addEventListener('click', () => { const list = visible(); current = (current + 1) % list.length; show(list[current]); });
+    dialog?.addEventListener('keydown', (event) => {
+      if (event.key === 'ArrowLeft') { event.preventDefault(); (dialog.querySelector('[data-prev]') as HTMLButtonElement).click(); }
+      if (event.key === 'ArrowRight') { event.preventDefault(); (dialog.querySelector('[data-next]') as HTMLButtonElement).click(); }
+    });
+    dialog?.addEventListener('close', () => { image?.removeAttribute('src'); opener?.focus(); });
+    controls?.removeAttribute('hidden');
+    controls?.querySelectorAll<HTMLButtonElement>('[data-filter]').forEach((button) => button.addEventListener('click', () => {
+      controls.querySelectorAll('[data-filter]').forEach((b) => b.setAttribute('aria-pressed', String(b === button)));
+      document.querySelectorAll<HTMLElement>('.gallery-item').forEach((item) => { item.hidden = button.dataset.filter !== 'All' && item.dataset.category !== button.dataset.filter; });
+    }));
+  </script>
+</SiteLayout>

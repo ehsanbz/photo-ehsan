@@ -1,0 +1,8 @@
+---
+import { Image } from 'astro:assets';
+import SiteLayout from '../layouts/SiteLayout.astro';
+import image from '../assets/sample/berlin-stairs.webp';
+---
+<SiteLayout title="About" description="About Ehsan Bagherzadeh's photography: Berlin, urban environments, architecture, public transport and everyday observation.">
+  <div class="wrap"><div class="page-intro"><span class="eyebrow">04 / About</span><h1>A little about me</h1></div><div class="about-grid"><div><p>I'm Ehsan Bagherzadeh. Berlin is where I live and where I do most of my looking. I’m drawn to the spaces we move through every day: streets, stations, buildings, and the people who give them life.</p><p>Photography gives me a reason to slow down and pay attention. Sometimes that leads to a longer story about a place; sometimes it is just one frame from a walk. I also carry a camera when I travel, following familiar interests into unfamiliar cities.</p><p>This is a home for those photographs and notes. You can find my other work at <a href="https://www.ehsan.bz">ehsan.bz</a>.</p></div><div><Image src={image} alt="Sample photograph of a stairway in Berlin after rain" widths={[480,768,1024]} sizes="(max-width: 650px) 100vw, 45vw" format="webp" loading="lazy" /><p class="sample-note">Preview image · replace with your own photograph</p></div></div></div>
+</SiteLayout>

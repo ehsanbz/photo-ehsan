@@ -1,0 +1,9 @@
+---
+import SiteLayout from '../../layouts/SiteLayout.astro';
+import StoryCard from '../../components/StoryCard.astro';
+import { getPublished } from '../../lib/content';
+const stories = await getPublished('stories');
+---
+<SiteLayout title="Stories" description="Photo essays on Berlin, urban spaces, architecture, transport and travel by Ehsan Bagherzadeh." noindex={!stories.some((entry) => !entry.data.sample)}>
+  <div class="wrap"><div class="page-intro"><span class="eyebrow">01 / Collections</span><h1>Stories</h1><p>Places unfold slowly. These essays leave room for the photographs, and for the details between them.</p></div><div class="story-grid">{stories.map((story) => <StoryCard href={`/stories/${story.id}/`} title={story.data.title} subtitle={story.data.subtitle} location={story.data.location} date={story.data.date} image={story.data.cover} alt={story.data.coverAlt} sample={story.data.sample} />)}</div></div>
+</SiteLayout>

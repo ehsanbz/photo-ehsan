@@ -1,0 +1,21 @@
+{
+  "name": "ehsan-photography",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "check": "astro check"
+  },
+  "dependencies": {
+    "@astrojs/sitemap": "^3.7.0",
+    "astro": "^7.3.4"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.6",
+    "prettier": "^3.6.2",
+    "typescript": "^5.9.3"
+  }
+}

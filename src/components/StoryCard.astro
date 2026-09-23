@@ -1,0 +1,14 @@
+---
+import { Image } from 'astro:assets';
+interface Props { href: string; title: string; subtitle?: string; location?: string; date: Date; image: ImageMetadata; alt: string; sample?: boolean; }
+const { href, title, subtitle, location, date, image, alt, sample } = Astro.props;
+const widths = [360, 640, 900, 1200].filter((w) => w <= image.width);
+---
+<article class="story-card">
+  <a href={href} aria-label={`Read ${title}`}>
+    <div class="card-image"><Image src={image} alt={alt} widths={widths} sizes="(max-width: 700px) 100vw, 48vw" format="webp" loading="lazy" decoding="async" /></div>
+    <div class="card-meta"><span>{location ?? 'Photo essay'}{sample ? ' · Sample' : ''}</span><time datetime={date.toISOString()}>{date.getUTCFullYear()}</time></div>
+    <h3>{title} <span aria-hidden="true">↗</span></h3>
+    {subtitle && <p>{subtitle}</p>}
+  </a>
+</article>

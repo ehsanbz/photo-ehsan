@@ -1,0 +1,21 @@
+---
+import { Image } from 'astro:assets';
+import SiteLayout from '../layouts/SiteLayout.astro';
+import StoryCard from '../components/StoryCard.astro';
+import { getPublished, getGallery } from '../lib/content';
+import hero from '../assets/sample/berlin-train.webp';
+const [stories, gallery] = await Promise.all([getPublished('stories'), getGallery()]);
+const featured = stories.slice(0, 2);
+const heroImage = featured[0]?.data.cover ?? hero;
+const heroWidths = [...new Set([480, 768, 1200, 1600, 2200, heroImage.width].filter((width) => width <= heroImage.width))].sort((a, b) => a - b);
+---
+<SiteLayout title="Photography" description="Photographs and visual stories by Ehsan Bagherzadeh, exploring Berlin, cities, transport, architecture and travel." noindex={!stories.some((entry) => !entry.data.sample)}>
+  <section class="hero" aria-labelledby="hero-title">
+    <Image src={heroImage} alt={featured[0]?.data.coverAlt ?? 'Berlin cityscape at dusk'} widths={heroWidths} sizes="100vw" format="webp" loading="eager" fetchpriority="high" />
+    <div class="hero-copy"><span class="eyebrow">Photography · Berlin & elsewhere</span><h1 id="hero-title">Ehsan<br />Bagherzadeh</h1><p>Looking closely at ordinary places.</p></div>
+  </section>
+  <div class="hero-credit wrap"><span>Selected photographs & visual stories</span><span>Preview edition · sample imagery</span></div>
+  <section class="home-statement wrap"><h2>City light, passing journeys, and the quiet geometry of everyday life.</h2><aside>Photography is a way of paying attention. This space collects walks, places and moments, one frame at a time.</aside></section>
+  <section class="wrap" aria-labelledby="selected-title"><div class="rule-heading"><h2 id="selected-title">Selected stories</h2><a class="text-link" href="/stories/">All stories →</a></div><div class="story-grid">{featured.map((story) => <StoryCard href={`/stories/${story.id}/`} title={story.data.title} subtitle={story.data.subtitle} location={story.data.location} date={story.data.date} image={story.data.cover} alt={story.data.coverAlt} sample={story.data.sample} />)}</div></section>
+  {gallery.length > 0 && <section class="wrap section-space gallery-teaser" aria-labelledby="gallery-title"><Image src={gallery[2]?.image ?? gallery[0].image} alt={gallery[2]?.alt ?? gallery[0].alt} widths={[480,768,1024]} sizes="(max-width: 650px) 100vw, 60vw" format="webp" loading="lazy" /><div class="teaser-copy"><span class="eyebrow">Individual frames</span><h2 id="gallery-title">The gallery</h2><p>Scenes that stand on their own, gathered outside the longer stories.</p><a class="text-link" href="/gallery/">Explore photographs →</a></div></section>}
+</SiteLayout>
