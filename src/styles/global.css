@@ -59,11 +59,36 @@ button:focus-visible {
   outline-offset: 4px;
 }
 .site-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: var(--paper);
+  border-bottom: 1px solid var(--line);
+}
+.header-inner {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 28px;
   min-height: 96px;
+}
+.brand-group {
+  display: flex;
+  align-items: center;
+  gap: clamp(18px, 2.6vw, 36px);
+}
+.main-site-link {
+  flex-shrink: 0;
+  font-size: 0.69rem;
+  letter-spacing: 0.065em;
+  text-decoration: none;
+  text-transform: uppercase;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 3px;
+}
+.main-site-link:hover {
+  border-color: var(--ink);
 }
 .wordmark {
   text-decoration: none;
@@ -187,17 +212,6 @@ p {
   font-family: var(--serif);
   font-size: 1.6rem;
   color: var(--ink);
-}
-.footer-links {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 16px;
-}
-.footer-links a {
-  text-decoration: none;
-  color: var(--ink);
-  border-bottom: 1px solid var(--line);
 }
 .hero {
   position: relative;
@@ -617,7 +631,7 @@ p {
   .wrap {
     width: min(100% - 44px, 1440px);
   }
-  .site-header {
+  .header-inner {
     min-height: 105px;
     align-items: flex-start;
     padding-top: 22px;
@@ -653,6 +667,17 @@ p {
   }
 }
 @media (max-width: 650px) {
+  .brand-group {
+    width: 100%;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .wordmark {
+    font-size: 1.24rem;
+  }
+  .main-site-link {
+    font-size: 0.64rem;
+  }
   .site-header nav a {
     font-size: 0.72rem;
   }
@@ -732,10 +757,6 @@ p {
   .site-footer {
     margin-top: 75px;
     display: block;
-  }
-  .footer-links {
-    align-items: flex-start;
-    margin-top: 26px;
   }
   .lightbox-view {
     gap: 5px;
