@@ -1,3 +1,3 @@
 User-agent: *
 Allow: /
-Sitemap: https://photo.ehsan.bz/sitemap-index.xml
+Sitemap: https://photos.ehsan.bz/sitemap-index.xml
