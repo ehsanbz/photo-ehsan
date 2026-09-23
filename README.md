@@ -1,6 +1,6 @@
 # Ehsan Bagherzadeh · Photography
 
-An image-first, static photography portfolio and journal for **photo.ehsan.bz**. Built with Astro, Markdown content collections, and no database or CMS. The sample images in `src/assets/sample/` are generated design previews, **not Ehsan's photographs**. Replace the sample content and images before presenting the site as a finished photographic portfolio.
+An image-first, static photography portfolio and journal for **photos.ehsan.bz**. Built with Astro, Markdown content collections, and no database or CMS. The sample images in `src/assets/sample/` are generated design previews, **not Ehsan's photographs**. Replace the sample content and images before presenting the site as a finished photographic portfolio.
 
 ## Run locally
 
@@ -105,11 +105,11 @@ When you have your own images, replace the `src/assets/sample/` imports used on 
    Change the remote URL if you chose a different repository name. Create the GitHub repository without starter files to avoid an unrelated initial commit.
 2. In Cloudflare **Workers & Pages**, create a **Pages** project with Git integration, select the repository and `main` branch.
 3. Set the build command to `npm run build` and output directory to `dist`. Set `NODE_VERSION` to a supported Node 22 release (at least 22.12) if Cloudflare's default is older. No framework adapter, environment secrets, database or paid CMS are required.
-4. After the first deployment succeeds at the assigned `*.pages.dev` address, open the Pages project's **Custom domains** and add `photo.ehsan.bz` there **before** editing DNS.
-5. If the DNS zone for `ehsan.bz` is in Cloudflare, follow its prompted DNS setup. If DNS is elsewhere, add a `CNAME` for `photo` pointing to **your actual Pages project's** `<project>.pages.dev` hostname. Let Cloudflare validate the hostname and issue its certificate. A manually created CNAME by itself does not complete Pages domain association.
-6. Verify `https://photo.ehsan.bz`, the generated sitemap at `/sitemap-index.xml`, and sharing previews. Subsequent pushes to `main` deploy automatically.
+4. After the first deployment succeeds at the assigned `*.pages.dev` address, open the Pages project's **Custom domains** and add `photos.ehsan.bz` there **before** editing DNS.
+5. If the DNS zone for `ehsan.bz` is in Cloudflare, follow its prompted DNS setup. If DNS is elsewhere, add a `CNAME` for `photos` pointing to **your actual Pages project's** `<project>.pages.dev` hostname. Let Cloudflare validate the hostname and issue its certificate. A manually created CNAME by itself does not complete Pages domain association.
+6. Verify `https://photos.ehsan.bz`, the generated sitemap at `/sitemap-index.xml`, and sharing previews. Subsequent pushes to `main` deploy automatically.
 
-The Astro `site` setting already uses `https://photo.ehsan.bz` for canonical URLs and the sitemap. `public/robots.txt` points crawlers to that sitemap. Story and Journal pages use their covers as Open Graph images; general pages currently use the sample hero until replaced.
+The Astro `site` setting already uses `https://photos.ehsan.bz` for canonical URLs and the sitemap. `public/robots.txt` points crawlers to that sitemap. Story and Journal pages use their covers as Open Graph images; general pages currently use the sample hero until replaced.
 
 Sample entries carry `noindex` so search engines do not mistake previews for finished photo essays. Home, Stories, Journal and Gallery also carry `noindex` while they contain only sample entries; that flag clears automatically once you publish a real entry. Remove the samples when you are ready to launch.
 
