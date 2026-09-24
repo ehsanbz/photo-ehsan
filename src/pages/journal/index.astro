@@ -1,8 +1,0 @@
----
-import SiteLayout from '../../layouts/SiteLayout.astro';
-import { getPublished, formatDate } from '../../lib/content';
-const entries = await getPublished('journal');
----
-<SiteLayout title="Journal" description="Short photography notes, walks and observations by Ehsan Bagherzadeh." noindex={!entries.some((entry) => !entry.data.sample)}>
-  <div class="wrap"><div class="page-intro"><span class="eyebrow">03 / Notes</span><h1>Journal</h1><p>Shorter walks, passing observations and small collections of photographs.</p></div><div class="journal-list">{entries.map((entry) => <a class="journal-row" href={`/journal/${entry.id}/`}><span><time datetime={entry.data.date.toISOString()}>{formatDate(entry.data.date)}</time></span><h2>{entry.data.title}</h2><span>{entry.data.location ?? 'Journal'} →</span></a>)}</div></div>
-</SiteLayout>

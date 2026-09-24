@@ -1,0 +1,36 @@
+---
+import SiteLayout from '../../layouts/SiteLayout.astro';
+import PhotoGrid from '../../components/PhotoGrid.astro';
+import { getPublishedAlbums, type PublishedAlbum } from '../../lib/flickr';
+import { getCollection, render } from 'astro:content';
+export async function getStaticPaths() {
+  const albums = await getPublishedAlbums();
+  return albums.map(album => ({ params: { slug: album.slug }, props: { album } }));
+}
+const { album } = Astro.props as { album: PublishedAlbum };
+const essay = (await getCollection('essays')).find(entry => entry.id === album.slug);
+const Content = essay ? (await render(essay)).Content : null;
+const structured = {
+  '@context': 'https://schema.org', '@type': 'ImageGallery', name: album.title,
+  description: album.description, url: new URL(Astro.url.pathname, Astro.site).href,
+  creator: { '@type': 'Person', name: 'Ehsan Bagherzadeh' },
+  associatedMedia: album.photos.map(photo => ({
+    '@type': 'ImageObject', name: photo.title, description: photo.description,
+    contentUrl: photo.full, dateCreated: photo.date,
+  })),
+};
+---
+<SiteLayout title={album.title} description={album.description || `A photography album by Ehsan Bagherzadeh: ${album.title}.`} image={album.cover?.full} type="article" noindex={!album.photos.length}>
+  <script type="application/ld+json" set:html={JSON.stringify(structured).replace(/</g, '\\u003c')} />
+  <div class="page-width">
+    <div class="album-heading"><a href="/albums/" class="back-link">← All albums</a><span class="eyebrow">{essay ? 'Photo story' : 'Photo album'} · {album.photos.length} photographs</span><h1>{album.title}</h1>
+      {essay?.data.subtitle && <p class="subtitle">{essay.data.subtitle}</p>}
+      {album.description && <p class="album-description">{album.description}</p>}
+      {(essay?.data.location || essay?.data.date) && <p class="album-meta">{[essay.data.location, essay.data.date].filter(Boolean).join(' · ')}</p>}
+    </div>
+    {Content && <div class="essay-intro"><Content /></div>}
+    {album.photos.length ? <PhotoGrid items={album.photos.map(photo => ({ photo }))} heading={album.title} sections={essay?.data.sections} /> : <p class="empty-state">This album has no public photographs yet.</p>}
+    {essay?.data.closingNote && <p class="closing-note">{essay.data.closingNote}</p>}
+    <div class="after-grid"><a href="/albums/">All albums <span aria-hidden="true">↗</span></a></div>
+  </div>
+</SiteLayout>
