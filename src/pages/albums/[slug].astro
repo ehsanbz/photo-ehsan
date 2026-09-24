@@ -2,13 +2,13 @@
 import SiteLayout from '../../layouts/SiteLayout.astro';
 import PhotoGrid from '../../components/PhotoGrid.astro';
 import { getPublishedAlbums, type PublishedAlbum } from '../../lib/flickr';
-import { getEntry, render } from 'astro:content';
+import { getCollection, render } from 'astro:content';
 export async function getStaticPaths() {
   const albums = await getPublishedAlbums();
   return albums.map(album => ({ params: { slug: album.slug }, props: { album } }));
 }
 const { album } = Astro.props as { album: PublishedAlbum };
-const essay = await getEntry('essays', album.slug);
+const essay = (await getCollection('essays')).find(entry => entry.id === album.slug);
 const Content = essay ? (await render(essay)).Content : null;
 const structured = {
   '@context': 'https://schema.org', '@type': 'ImageGallery', name: album.title,

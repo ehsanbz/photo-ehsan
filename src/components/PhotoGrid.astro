@@ -12,12 +12,12 @@ const { items, heading = 'Photographs', sections = [] } = Astro.props;
         data-title={photo.title || 'Photograph'}
         data-description={photo.description}
         data-date={photo.date || ''}
-        data-exif={photo.exif || ''}
         data-full={photo.full}
+        data-fallback={photo.fallback}
         data-flickr={photo.flickrUrl}
         aria-label={`View ${photo.title || 'photograph'} larger`}>
         <img src={photo.src} srcset={photo.srcset} sizes="(max-width: 520px) 50vw, (max-width: 840px) 50vw, (max-width: 1199px) 33vw, 25vw"
-          width={photo.width} height={photo.height} alt={photo.title || photo.description || 'Photograph by Ehsan Bagherzadeh'}
+          width={photo.width} height={photo.height} alt={photo.title || `Photograph from ${heading} by Ehsan Bagherzadeh`}
           loading={index < 4 ? 'eager' : 'lazy'} fetchpriority={index === 0 ? 'high' : undefined} decoding="async" />
         <span class="image-unavailable" hidden>Image unavailable · View on Flickr ↗</span>
         <span class="photo-overlay" aria-hidden="true">{photo.title || 'View photograph'} <span>↗</span></span>
@@ -37,7 +37,7 @@ const { items, heading = 'Photographs', sections = [] } = Astro.props;
       <button type="button" data-next aria-label="Next photograph">→</button>
     </div>
     <div class="viewer-bottom">
-      <div class="viewer-caption"><strong data-title></strong><span data-description></span><span data-date></span><details data-exif-wrap><summary>Technical details</summary><span data-exif></span></details></div>
+      <div class="viewer-caption"><strong data-title></strong><span data-description></span><span data-date></span></div>
       <div class="viewer-actions"><span data-counter aria-live="polite"></span><a data-flickr href="https://www.flickr.com/" target="_blank" rel="noopener noreferrer">On Flickr ↗</a></div>
     </div>
   </div>
@@ -52,13 +52,28 @@ const { items, heading = 'Photographs', sections = [] } = Astro.props;
   gallery?.querySelectorAll<HTMLImageElement>('.photo-item img').forEach(img => img.addEventListener('error', () => {
     const link = img.closest<HTMLAnchorElement>('.photo-open');
     if (!link) return;
+    if (!img.dataset.fallbackAttempted && link.dataset.fallback) {
+      img.dataset.fallbackAttempted = 'true';
+      img.removeAttribute('srcset');
+      img.src = link.dataset.fallback;
+      return;
+    }
     img.hidden = true;
     link.querySelector<HTMLElement>('.image-unavailable')?.removeAttribute('hidden');
     link.href = link.dataset.flickr || 'https://www.flickr.com/';
     link.removeAttribute('data-photo-link');
     link.setAttribute('aria-label', 'Image unavailable; view photograph on Flickr');
   }));
-  viewer?.addEventListener('error', () => { if (viewer) viewer.hidden = true; if (viewerError) viewerError.hidden = false; });
+  viewer?.addEventListener('error', () => {
+    const link = links()[current];
+    if (viewer && !viewer.dataset.fallbackAttempted && link?.dataset.fallback) {
+      viewer.dataset.fallbackAttempted = 'true';
+      viewer.src = link.dataset.fallback;
+      return;
+    }
+    if (viewer) viewer.hidden = true;
+    if (viewerError) viewerError.hidden = false;
+  });
   const links = () => [...(gallery?.querySelectorAll<HTMLAnchorElement>('.photo-item:not([hidden]) [data-photo-link]') ?? [])];
   const set = (selector: string, value: string) => {
     const element = dialog?.querySelector<HTMLElement>(selector);
@@ -70,16 +85,14 @@ const { items, heading = 'Photographs', sections = [] } = Astro.props;
     current = (index + available.length) % available.length;
     const link = available[current];
     viewer.hidden = false;
+    delete viewer.dataset.fallbackAttempted;
     if (viewerError) viewerError.hidden = true;
     viewer.src = link.dataset.full || link.href;
     viewer.alt = link.querySelector('img')?.alt || '';
     set('[data-title]', link.dataset.title || '');
     set('[data-description]', link.dataset.description || '');
     set('[data-date]', link.dataset.date?.slice(0, 10) || '');
-    set('[data-exif]', link.dataset.exif || '');
     set('[data-counter]', `${current + 1} / ${available.length}`);
-    const details = dialog.querySelector<HTMLElement>('[data-exif-wrap]');
-    if (details) details.hidden = !link.dataset.exif;
     const flickr = dialog.querySelector<HTMLAnchorElement>('[data-flickr]');
     if (flickr) flickr.href = link.dataset.flickr || 'https://www.flickr.com/';
   }

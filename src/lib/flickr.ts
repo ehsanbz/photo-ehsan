@@ -1,181 +1,174 @@
-import { albums, type AlbumConfig } from '../config/albums';
+import { albums, flickrUserId, type AlbumConfig } from '../config/albums';
 
-type Text = string | { _content?: string } | undefined;
-const asText = (value: Text) => typeof value === 'string' ? value : value?._content ?? '';
-const asPlainText = (value: Text) => asText(value)
-  .replace(/<br\s*\/?\s*>|<\/(?:p|div|li)>/gi, '\n')
-  .replace(/<[^>]+>/g, '')
-  .replace(/&(?:amp|lt|gt|quot|apos|nbsp|#39);/g, entity => ({
-    '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&apos;': "'", '&nbsp;': ' ', '&#39;': "'",
-  })[entity] ?? entity).trim();
-const asNumber = (value: number | string | undefined, fallback = 0) => Number(value) || fallback;
-
-interface ApiReply { stat: 'ok' | 'fail'; code?: number; message?: string }
-interface PhotosetInfoReply extends ApiReply {
-  photoset: { id: string; primary: string; title: Text; description: Text };
+interface FeedItem {
+  title?: string;
+  link?: string;
+  media?: { m?: string };
+  date_taken?: string;
+  description?: string;
+  published?: string;
+  author_id?: string;
+  tags?: string;
 }
-interface RawPhoto {
-  id: string; title: string; secret: string; server: string; ispublic?: number | string;
-  datetaken?: string; tags?: string;
-}
-interface PhotosReply extends ApiReply {
-  photoset: { photo: RawPhoto[]; page: number | string; pages: number | string; total: number | string };
-}
-interface InfoReply extends ApiReply {
-  photo: { title: Text; description: Text; dates?: { taken?: string }; tags?: { tag?: Array<{ raw?: string }> } };
-}
-interface SizesReply extends ApiReply {
-  sizes: { size: Array<{ label: string; width: string; height: string; source: string }> };
-}
-interface ExifReply extends ApiReply {
-  photo: { exif?: Array<{ tag: string; label?: string; clean?: Text; raw?: Text }> };
+interface AlbumFeed {
+  title?: string;
+  description?: string;
+  items?: FeedItem[];
 }
 export interface Photo {
-  id: string; title: string; description: string; date?: string; tags: string[];
-  width: number; height: number; src: string; srcset: string; full: string; flickrUrl: string;
-  exif?: string;
+  id: string;
+  title: string;
+  description: string;
+  date?: string;
+  tags: string[];
+  width: number;
+  height: number;
+  src: string;
+  srcset: string;
+  full: string;
+  fallback: string;
+  flickrUrl: string;
 }
 export interface PublishedAlbum {
-  id: string; slug: string; title: string; description: string; featured: boolean;
-  cover?: Photo; photos: Photo[]; showExif: boolean;
+  id: string;
+  slug: string;
+  title: string;
+  description: string;
+  featured: boolean;
+  cover?: Photo;
+  photos: Photo[];
 }
 
-const endpoint = 'https://www.flickr.com/services/rest/';
-const userId = () => import.meta.env.FLICKR_USER_ID || process.env.FLICKR_USER_ID;
-const apiKey = () => import.meta.env.FLICKR_API_KEY || process.env.FLICKR_API_KEY;
+function plainText(html = ''): string {
+  const entities: Record<string, string> = {
+    '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"',
+    '&apos;': "'", '&#39;': "'", '&nbsp;': ' ',
+  };
+  return html.replace(/<br\s*\/?\s*>|<\/(?:p|div|li)>/gi, '\n')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&(?:amp|lt|gt|quot|apos|nbsp|#39);/g, entity => entities[entity] ?? entity)
+    .replace(/\n\s*\n\s*\n/g, '\n\n').trim();
+}
 
-async function call<T extends ApiReply>(method: string, params: Record<string, string>): Promise<T> {
-  const url = new URL(endpoint);
-  url.search = new URLSearchParams({ method, api_key: apiKey(), format: 'json', nojsoncallback: '1', ...params }).toString();
-  let lastError: Error = new Error('Unknown Flickr response');
+function photoDescription(html = ''): string {
+  // Flickr's feed always prepends two attribution/image paragraphs.
+  const withoutWrapper = html
+    .replace(/^\s*<p>.*?posted a photo:<\/p>/is, '')
+    .replace(/^\s*<p>\s*<a\b[^>]*>\s*<img\b[^>]*>\s*<\/a>\s*<\/p>/is, '');
+  return plainText(withoutWrapper);
+}
+
+async function getAlbumFeed(albumId: string): Promise<AlbumFeed> {
+  const url = new URL('https://api.flickr.com/services/feeds/photoset.gne');
+  url.search = new URLSearchParams({
+    set: albumId,
+    nsid: flickrUserId,
+    format: 'json',
+    nojsoncallback: '1',
+  }).toString();
+  let lastError: Error = new Error('Unknown feed error');
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
-      const response = await fetch(url, { headers: { 'User-Agent': 'ehsan-photography/2.0 (photos.ehsan.bz)' }, signal: AbortSignal.timeout(20000) });
+      const response = await fetch(url, {
+        headers: { 'User-Agent': 'ehsan-photography/2.1 (photos.ehsan.bz)' },
+        signal: AbortSignal.timeout(20000),
+      });
       if (!response.ok) {
-        lastError = new Error(`${method}: HTTP ${response.status}`);
-        if (response.status === 429 || response.status >= 500) throw lastError;
-        break;
+        lastError = new Error(`HTTP ${response.status}`);
+        if (response.status !== 429 && response.status < 500) break;
+      } else {
+        const feed = await response.json() as AlbumFeed;
+        if (typeof feed.title !== 'string' || !Array.isArray(feed.items)) {
+          throw new Error('Unexpected feed response');
+        }
+        return feed;
       }
-      const data = await response.json() as T;
-      if (data.stat === 'ok') return data;
-      lastError = new Error(`${method}: Flickr error ${data.code ?? '?'} — ${data.message ?? 'unknown error'}`);
-      if (data.code !== 105 && data.code !== 106) break;
     } catch (error) { lastError = error instanceof Error ? error : new Error(String(error)); }
-    if (attempt < 2) await new Promise(resolve => setTimeout(resolve, (attempt + 1) * 800));
+    if (attempt < 2) await new Promise(resolve => setTimeout(resolve, 900 * (attempt + 1)));
   }
-  // Never print the URL: it contains the API key.
-  throw new Error(`Flickr request failed: ${lastError.message}`);
+  throw new Error(`Flickr album feed ${albumId} failed: ${lastError.message}`);
 }
 
-async function mapLimited<T, R>(list: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
-  const output = new Array<R>(list.length);
-  let cursor = 0;
-  await Promise.all(Array.from({ length: Math.min(limit, list.length) }, async () => {
-    while (cursor < list.length) { const index = cursor++; output[index] = await fn(list[index]); }
-  }));
-  return output;
+function variant(source: string, suffix: 'n' | 'z' | 'c' | 'b'): string {
+  // Flickr documents that all sizes up to 1024px use the same photo secret.
+  return source.replace(/_m\.(jpe?g|png|gif)$/i, `_${suffix}.$1`);
 }
 
-export async function getPhotoset(id: string) {
-  return (await call<PhotosetInfoReply>('flickr.photosets.getInfo', { photoset_id: id, user_id: userId() })).photoset;
-}
-
-export async function getPhotosetPhotos(id: string): Promise<RawPhoto[]> {
-  const all: RawPhoto[] = [];
-  let page = 1;
-  do {
-    const { photoset } = await call<PhotosReply>('flickr.photosets.getPhotos', {
-      photoset_id: id, user_id: userId(), media: 'photos', per_page: '500', page: String(page),
-      extras: 'date_taken,tags,o_dims',
-    });
-    all.push(...(photoset.photo ?? []));
-    if (page >= asNumber(photoset.pages, 1)) break;
-    if (page >= 100) throw new Error(`Flickr album ${id} has over 100 pages; refusing to silently truncate it.`);
-    page++;
-  } while (true);
-  return all;
-}
-
-export async function getPhotoInfo(id: string) {
-  return (await call<InfoReply>('flickr.photos.getInfo', { photo_id: id })).photo;
-}
-
-export async function getPhotoExif(id: string): Promise<string | undefined> {
-  try {
-    const data = (await call<ExifReply>('flickr.photos.getExif', { photo_id: id })).photo.exif ?? [];
-    const value = (tag: string) => {
-      const entry = data.find(item => item.tag === tag);
-      return entry ? asText(entry.clean) || asText(entry.raw) : '';
-    };
-    const camera = [value('Make'), value('Model')].filter(Boolean).join(' ');
-    return [camera, value('FocalLength'), value('FNumber'), value('ExposureTime'), value('ISO') && `ISO ${value('ISO')}`].filter(Boolean).join(' · ') || undefined;
-  } catch (error) {
-    console.warn(`EXIF unavailable for photo ${id}: ${error instanceof Error ? error.message : error}`);
-    return undefined;
-  }
-}
-
-async function hydratePhoto(raw: RawPhoto, showExif: boolean): Promise<Photo | undefined> {
-  try {
-    const [info, sizes, exif] = await Promise.all([
-      getPhotoInfo(raw.id),
-      call<SizesReply>('flickr.photos.getSizes', { photo_id: raw.id }),
-      showExif ? getPhotoExif(raw.id) : Promise.resolve(undefined),
-    ]);
-    const candidates = (sizes.sizes.size ?? [])
-      .filter(size => !/Original|Square/i.test(size.label) && size.source.startsWith('https://') && asNumber(size.width) > 0 && asNumber(size.height) > 0)
-      .sort((a, b) => asNumber(a.width) - asNumber(b.width));
-    if (!candidates.length) { console.warn(`No displayable size for Flickr photo ${raw.id}; skipped.`); return undefined; }
-    const usable = candidates.filter(size => asNumber(size.width) <= 2048);
-    const variants = [...new Map((usable.length ? usable : candidates.slice(0, 1)).map(size => [size.width, size])).values()]
-      .sort((a, b) => asNumber(a.width) - asNumber(b.width));
-    const thumb = variants.find(size => asNumber(size.width) >= 800) ?? variants.at(-1)!;
-    const full = variants.at(-1)!;
-    const title = asPlainText(info.title) || raw.title || '';
-    return {
-      id: raw.id, title, description: asPlainText(info.description), date: info.dates?.taken || raw.datetaken,
-      tags: info.tags?.tag?.map(tag => tag.raw || '').filter(Boolean) ?? raw.tags?.split(' ').filter(Boolean) ?? [],
-      width: asNumber(thumb.width), height: asNumber(thumb.height), src: thumb.source,
-      srcset: variants.map(size => `${size.source} ${size.width}w`).join(', '), full: full.source,
-      flickrUrl: `https://www.flickr.com/photos/${encodeURIComponent(userId())}/${encodeURIComponent(raw.id)}/`, exif,
-    };
-  } catch (error) {
-    // A photo might have become private or been deleted between the album and detail calls.
-    const message = error instanceof Error ? error.message : String(error);
-    if (/Flickr error (1|2|3|4)\b|HTTP 404\b/.test(message)) {
-      console.warn(`Skipping unavailable Flickr photo ${raw.id}: ${message}`);
-      return undefined;
-    }
-    throw new Error(`Photo ${raw.id} in Flickr album could not be loaded: ${message}`);
-  }
+function photoFromFeed(item: FeedItem): Photo | undefined {
+  if (item.author_id !== flickrUserId || !item.media?.m || !item.link) return undefined;
+  const media = new URL(item.media.m);
+  const link = new URL(item.link);
+  if (media.protocol !== 'https:' || media.hostname !== 'live.staticflickr.com' ||
+    link.protocol !== 'https:' || link.hostname !== 'www.flickr.com') return undefined;
+  const id = link.pathname.match(/^\/photos\/[^/]+\/(\d+)(?:\/|$)/)?.[1];
+  if (!id || !/_m\.(jpe?g|png|gif)$/i.test(media.pathname)) return undefined;
+  const size = item.description?.match(/<img\b[^>]*\bwidth="(\d+)"[^>]*\bheight="(\d+)"/i);
+  const width = Number(size?.[1]) || 240;
+  const height = Number(size?.[2]) || 160;
+  const title = /^(_?MG_|IMG_|PXL_|DSC_|DSCF|\d{8}_)/i.test(item.title || '') ? '' : plainText(item.title);
+  const src = variant(media.href, 'c');
+  const displayWidth = (longEdge: number) => Math.round(longEdge * Math.min(1, width / height));
+  return {
+    id, title: title || '', description: photoDescription(item.description),
+    date: item.date_taken, tags: item.tags?.split(/\s+/).filter(Boolean) ?? [],
+    width, height, src, fallback: media.href, full: variant(media.href, 'b'),
+    srcset: [
+      `${variant(media.href, 'n')} ${displayWidth(320)}w`,
+      `${variant(media.href, 'z')} ${displayWidth(640)}w`,
+      `${src} ${displayWidth(800)}w`,
+    ].join(', '),
+    flickrUrl: link.href,
+  };
 }
 
 async function loadAlbum(config: AlbumConfig): Promise<PublishedAlbum> {
-  const [info, rawPhotos] = await Promise.all([getPhotoset(config.albumId), getPhotosetPhotos(config.albumId)]);
-  const mapped = await mapLimited(rawPhotos.filter(raw => String(raw.ispublic ?? 1) === '1'), 5, photo => hydratePhoto(photo, !!config.showExif));
-  const photos = mapped.filter((photo): photo is Photo => !!photo);
-  if (rawPhotos.length > 0 && photos.length === 0) throw new Error(`Album ${config.slug} contains photos, but none could be loaded. Refusing to publish an empty page.`);
-  if (config.coverPhotoId && !photos.some(photo => photo.id === config.coverPhotoId)) throw new Error(`Cover photo ${config.coverPhotoId} is not a public photo in album ${config.slug}.`);
-  const primaryId = config.coverPhotoId || info.primary;
+  const feed = await getAlbumFeed(config.albumId);
+  const photos = (feed.items ?? []).map(photoFromFeed)
+    .filter((photo): photo is Photo => !!photo);
+  if (feed.items?.length && !photos.length) {
+    throw new Error(`Album ${config.slug} has feed items but no valid public photographs.`);
+  }
+  if (config.coverPhotoId && !photos.some(photo => photo.id === config.coverPhotoId)) {
+    throw new Error(`Cover photo ${config.coverPhotoId} is absent from the limited public feed for ${config.slug}.`);
+  }
+  if (feed.items?.length === 20) {
+    console.warn(`Album ${config.slug} returned 20 feed items. Flickr feeds have no documented pagination; older photos may be absent.`);
+  }
+  if (config.photoOrder?.length) {
+    const missing = config.photoOrder.filter(id => !photos.some(photo => photo.id === id));
+    if (missing.length) console.warn(`Album ${config.slug}: ordered photo IDs absent from the feed: ${missing.join(', ')}`);
+    const position = new Map(config.photoOrder.map((id, index) => [id, index]));
+    photos.sort((a, b) => (position.get(a.id) ?? Infinity) - (position.get(b.id) ?? Infinity));
+  }
+  const feedTitle = feed.title?.replace(/^Content from\s+/i, '').trim();
   return {
     id: config.albumId, slug: config.slug, featured: !!config.featured,
-    title: config.title || asPlainText(info.title) || config.slug,
-    description: config.description ?? asPlainText(info.description),
-    showExif: !!config.showExif, cover: photos.find(photo => photo.id === primaryId) ?? photos[0], photos,
+    title: config.title || plainText(feedTitle) || config.slug,
+    description: config.description ?? plainText(feed.description),
+    cover: photos.find(photo => photo.id === config.coverPhotoId) ?? photos[0],
+    photos,
   };
 }
 
 let pending: Promise<PublishedAlbum[]> | undefined;
 export function getPublishedAlbums(): Promise<PublishedAlbum[]> {
   return pending ??= (async () => {
-    const visible = albums.filter(album => album.visible !== false).sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
-    if (!visible.length) return [];
-    if (!apiKey() || !userId()) throw new Error('Set FLICKR_API_KEY and FLICKR_USER_ID for configured Flickr albums.');
+    const visible = albums.filter(album => album.visible !== false)
+      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
     const slugs = new Set<string>();
+    const ids = new Set<string>();
     for (const album of visible) {
-      if (!album.albumId || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(album.slug) || slugs.has(album.slug)) throw new Error(`Invalid or duplicate Flickr album slug: ${album.slug}`);
+      if (!/^\d+$/.test(album.albumId) || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(album.slug) ||
+        slugs.has(album.slug) || ids.has(album.albumId)) {
+        throw new Error(`Invalid or duplicate Flickr album configuration: ${album.slug}`);
+      }
       slugs.add(album.slug);
+      ids.add(album.albumId);
     }
-    return mapLimited(visible, 2, loadAlbum);
+    // Keep feed traffic light. If Flickr is unavailable the build fails and the
+    // last successful Cloudflare deployment stays live.
+    const results: PublishedAlbum[] = [];
+    for (const album of visible) results.push(await loadAlbum(album));
+    return results;
   })();
 }
