@@ -38,8 +38,10 @@ h1, h2 { font-family: Georgia, 'Times New Roman', serif; font-weight: 400; lette
 .album-filters { display: flex; overflow-x: auto; gap: 24px; padding: 0 0 14px; margin-bottom: 16px; scrollbar-width: thin; }
 .album-filters button { border: 0; border-bottom: 1px solid transparent; background: transparent; padding: 3px 0 7px; color: var(--muted); cursor: pointer; white-space: nowrap; text-align: left; font-size: .72rem; letter-spacing: .06em; }
 .album-filters button:hover, .album-filters button[aria-pressed=true] { color: var(--ink); border-color: var(--ink); }
-.photo-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); align-items: start; gap: 18px 14px; }
-.photo-item { min-width: 0; }
+.photo-grid { columns: 4; column-gap: 14px; }
+.photo-grid.with-sections { display: grid; columns: auto; grid-template-columns: repeat(4, minmax(0, 1fr)); align-items: start; gap: 18px 14px; }
+.photo-item { display: inline-block; width: 100%; min-width: 0; margin-bottom: 18px; break-inside: avoid; vertical-align: top; }
+.with-sections .photo-item { display: block; margin-bottom: 0; }
 .photo-open { display: block; position: relative; overflow: hidden; background: #e3e1dc; cursor: zoom-in; }
 .photo-open img { width: 100%; height: auto; transition: transform .35s ease, filter .35s ease; }
 .image-unavailable { display: flex; min-height: 200px; align-items: center; justify-content: center; padding: 20px; color: var(--muted); text-align: center; font-size: .8rem; }
@@ -103,13 +105,14 @@ h1, h2 { font-family: Georgia, 'Times New Roman', serif; font-weight: 400; lette
 .viewer-caption summary { cursor: pointer; }
 .viewer-actions { display: flex; gap: 20px; white-space: nowrap; }
 .viewer-actions a { color: #fff; text-underline-offset: 3px; }
-@media (max-width: 1199px) { .photo-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 1199px) { .photo-grid { columns: 3; } .photo-grid.with-sections { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 840px) {
   .page-width, .header-inner, .site-footer { width: min(calc(100% - 36px), 1840px); }
   .header-inner { flex-wrap: wrap; padding: 12px 0 8px; gap: 9px; }
   .site-header nav { width: 100%; overflow-x: auto; }
   .site-header nav ul { gap: 25px; }
-  .photo-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 10px; }
+  .photo-grid { columns: 2; column-gap: 10px; }
+  .photo-grid.with-sections { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 10px; }
   .album-list { gap: 30px 14px; }
 }
 @media (max-width: 520px) {
@@ -121,7 +124,8 @@ h1, h2 { font-family: Georgia, 'Times New Roman', serif; font-weight: 400; lette
   .home-heading h1 { font-size: 1.36rem; }
   .home-heading p { display: none; }
   .album-filters { margin-bottom: 8px; gap: 18px; }
-  .photo-grid { gap: 14px 8px; }
+  .photo-grid { column-gap: 8px; }
+  .photo-item { margin-bottom: 14px; }
   .photo-item figcaption { font-size: .65rem; }
   .album-list { grid-template-columns: 1fr; }
   .album-card img { height: auto; max-height: 500px; }

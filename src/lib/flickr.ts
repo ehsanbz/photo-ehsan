@@ -105,7 +105,7 @@ function photoFromFeed(item: FeedItem): Photo | undefined {
   const size = item.description?.match(/<img\b[^>]*\bwidth="(\d+)"[^>]*\bheight="(\d+)"/i);
   const width = Number(size?.[1]) || 240;
   const height = Number(size?.[2]) || 160;
-  const title = /^(_?MG_|IMG_|PXL_|DSC_|DSCF|\d{8}_)/i.test(item.title || '') ? '' : plainText(item.title);
+  const title = /^(?:original_[a-f0-9-]+_)?(?:_?MG_|IMG_|PXL_|DSC_|DSCF|\d{8}_)/i.test(item.title || '') ? '' : plainText(item.title);
   const src = variant(media.href, 'c');
   const displayWidth = (longEdge: number) => Math.round(longEdge * Math.min(1, width / height));
   return {

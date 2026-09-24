@@ -5,7 +5,7 @@ interface Section { afterPhotoId: string; text: string; }
 interface Props { items: Item[]; heading?: string; sections?: Section[]; }
 const { items, heading = 'Photographs', sections = [] } = Astro.props;
 ---
-<section class="photo-grid" data-gallery aria-label={heading}>
+<section class:list={['photo-grid', { 'with-sections': sections.length > 0 }]} data-gallery aria-label={heading}>
   {items.map(({ photo, albums = [] }, index) => (<>
     <figure class="photo-item" id={`photo-${photo.id}`} data-albums={albums.join(' ')}>
       <a class="photo-open" href={photo.full} data-photo-link
