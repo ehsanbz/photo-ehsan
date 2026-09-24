@@ -1,0 +1,13 @@
+---
+import SiteLayout from '../../layouts/SiteLayout.astro';
+import { getPublishedAlbums } from '../../lib/flickr';
+const albums = await getPublishedAlbums();
+---
+<SiteLayout title="Albums" description="Photo albums by Ehsan Bagherzadeh, drawn from walks and journeys in Berlin and beyond." noindex={!albums.some(album => album.photos.length)}>
+  <div class="page-width"><div class="page-heading"><span class="eyebrow">Collections</span><h1>Albums</h1><p>Places and moments, collected in photographs.</p></div>
+    {albums.length ? <div class="album-list">{albums.map(album => <a class="album-card" href={`/albums/${album.slug}/`}>
+      {album.cover && <img src={album.cover.src} srcset={album.cover.srcset} sizes="(max-width: 700px) 100vw, 50vw" width={album.cover.width} height={album.cover.height} alt={album.cover.title || album.title} loading="lazy" decoding="async" />}
+      <div><span>{album.photos.length} photographs</span><h2>{album.title} <span aria-hidden="true">↗</span></h2><p>{album.description}</p></div>
+    </a>)}</div> : <p class="empty-state">Albums will appear here soon.</p>}
+  </div>
+</SiteLayout>

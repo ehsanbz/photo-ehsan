@@ -1,9 +1,16 @@
 ---
 import SiteLayout from '../../layouts/SiteLayout.astro';
-import StoryCard from '../../components/StoryCard.astro';
-import { getPublished } from '../../lib/content';
-const stories = await getPublished('stories');
+import { getCollection } from 'astro:content';
+import { getPublishedAlbums } from '../../lib/flickr';
+const [albums, entries] = await Promise.all([getPublishedAlbums(), getCollection('essays')]);
+const essaySlugs = new Set(entries.map(entry => entry.id));
+const stories = albums.filter(album => essaySlugs.has(album.slug));
 ---
-<SiteLayout title="Stories" description="Photo essays on Berlin, urban spaces, architecture, transport and travel by Ehsan Bagherzadeh." noindex={!stories.some((entry) => !entry.data.sample)}>
-  <div class="wrap"><div class="page-intro"><span class="eyebrow">01 / Collections</span><h1>Stories</h1><p>Places unfold slowly. These essays leave room for the photographs, and for the details between them.</p></div><div class="story-grid">{stories.map((story) => <StoryCard href={`/stories/${story.id}/`} title={story.data.title} subtitle={story.data.subtitle} location={story.data.location} date={story.data.date} image={story.data.cover} alt={story.data.coverAlt} sample={story.data.sample} />)}</div></div>
+<SiteLayout title="Stories" description="Photo stories by Ehsan Bagherzadeh: thoughtful sequences from Berlin and elsewhere." noindex={!stories.length}>
+  <div class="page-width"><div class="page-heading"><span class="eyebrow">Selected narratives</span><h1>Stories</h1><p>Photo essays built around places, light and observation.</p></div>
+    {stories.length ? <div class="album-list">{stories.map(album => <a class="album-card" href={`/albums/${album.slug}/`}>
+      {album.cover && <img src={album.cover.src} srcset={album.cover.srcset} sizes="(max-width: 700px) 100vw, 50vw" width={album.cover.width} height={album.cover.height} alt={album.cover.title || album.title} loading="lazy" />}
+      <div><span>Photo story</span><h2>{album.title} <span aria-hidden="true">↗</span></h2><p>{album.description}</p></div>
+    </a>)}</div> : <div class="empty-state"><p>Longer photo stories will appear here soon.</p><a href="/albums/">Browse albums ↗</a></div>}
+  </div>
 </SiteLayout>
