@@ -21,5 +21,6 @@ export const albums: AlbumConfig[] = [
   { albumId: '72177720335800863', slug: 'adventure', sortOrder: 4 },
   { albumId: '72177720335784530', slug: 'people-and-portraits', sortorder: 5 },
   { albumId: '72177720335829324', slug: 'documentry', sortorder: 6 },
+  { albumId: '72177720335854990', slug: 'ahead-of-me', sortorder: 7 },
   /** { albumId: '72177720335784530', slug: 'people-and-portraits', visible: false }, */
 ];
