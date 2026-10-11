@@ -2,10 +2,16 @@
 import SiteLayout from '../layouts/SiteLayout.astro';
 import PhotoGrid from '../components/PhotoGrid.astro';
 import { getPublishedAlbums, type Photo } from '../lib/flickr';
-const albums = (await getPublishedAlbums()).sort((a, b) => Number(b.featured) - Number(a.featured));
+import { albums as albumConfig } from '../config/albums';
+const publishedAlbums = await getPublishedAlbums();
+const hiddenAlbumIds = new Set(albumConfig.filter(album => album.showOnHome === false).map(album => album.albumId));
+const hiddenPhotoIds = new Set(publishedAlbums.filter(album => hiddenAlbumIds.has(album.id)).flatMap(album => album.photos.map(photo => photo.id)));
+const albums = publishedAlbums.filter(album => !hiddenAlbumIds.has(album.id))
+  .sort((a, b) => Number(b.featured) - Number(a.featured));
 const collected = new Map<string, { photo: Photo; albums: string[] }>();
 for (const album of albums) {
   for (const photo of album.photos.slice(0, 48)) {
+    if (hiddenPhotoIds.has(photo.id)) continue;
     const existing = collected.get(photo.id);
     if (existing) existing.albums.push(album.slug);
     else collected.set(photo.id, { photo, albums: [album.slug] });
@@ -19,7 +25,7 @@ const photos = [...collected.values()];
     {photos.length > 0 ? <>
       <nav class="album-filters" aria-label="Filter photographs by album">
         <button type="button" data-filter="all" aria-pressed="true">All photographs</button>
-        {albums.filter(album => album.photos.length).map(album => <button type="button" data-filter={album.slug} aria-pressed="false">{album.title}</button>)}
+        {albums.filter(album => album.photos.some(photo => !hiddenPhotoIds.has(photo.id))).map(album => <button type="button" data-filter={album.slug} aria-pressed="false">{album.title}</button>)}
       </nav>
       <PhotoGrid items={photos} heading="Selected photographs" />
       <div class="after-grid"><a href="/albums/">Explore all albums <span aria-hidden="true">↗</span></a></div>
