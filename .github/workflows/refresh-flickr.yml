@@ -1,0 +1,46 @@
+# Rebuild the static Flickr galleries once per day.
+# Cloudflare Pages is connected to this repository and deploys on pushes to main.
+# A deliberately empty commit triggers a fresh Pages build without changing site code.
+name: Refresh Flickr photos
+
+on:
+  schedule:
+    # 04:23 UTC (05:23 CET / 06:23 CEST); off the top of the hour to reduce delays.
+    - cron: '23 4 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: refresh-flickr-photos
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the site repository
+        uses: actions/checkout@v4
+
+      - name: Request a fresh Cloudflare Pages build
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Retry if another update lands on main at the same time.
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git checkout -B main origin/main
+            git commit --allow-empty -m "chore: refresh Flickr photos"
+            if git push origin main; then
+              echo "Pushed a rebuild commit; Cloudflare Pages should build this revision."
+              exit 0
+            fi
+            echo "Push attempt $attempt failed; retrying..."
+            sleep 5
+          done
+          echo "::error::Could not push the scheduled rebuild commit."
+          exit 1
